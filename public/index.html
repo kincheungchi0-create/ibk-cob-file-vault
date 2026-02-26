@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IBK COB File Vault</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3a;
+      --primary: #6366f1;
+      --primary-hover: #818cf8;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      padding: 24px 32px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    header h1 span { color: var(--primary); }
+
+    header p {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      margin-top: 4px;
+    }
+
+    main {
+      width: 100%;
+      max-width: 820px;
+      padding: 32px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: var(--surface);
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.06);
+    }
+
+    .drop-zone svg {
+      width: 48px;
+      height: 48px;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+
+    .drop-zone h3 {
+      font-size: 1rem;
+      margin-bottom: 6px;
+    }
+
+    .drop-zone p {
+      color: var(--text-dim);
+      font-size: 0.8rem;
+    }
+
+    .drop-zone p strong { color: var(--primary); cursor: pointer; }
+
+    #fileInput { display: none; }
+
+    .upload-preview {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .upload-preview.visible { display: flex; }
+
+    .upload-preview .file-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      background: rgba(99, 102, 241, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+    }
+
+    .upload-preview .file-info { flex: 1; min-width: 0; }
+    .upload-preview .file-info .name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .upload-preview .file-info .size { font-size: 0.75rem; color: var(--text-dim); }
+
+    .upload-btn {
+      padding: 10px 28px;
+      border: none;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .upload-btn:hover { background: var(--primary-hover); }
+    .upload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .progress-bar {
+      display: none;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .progress-bar.visible { display: block; }
+
+    .progress-bar .fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #fff;
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 100;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title .badge {
+      font-size: 0.7rem;
+      background: rgba(99, 102, 241, 0.15);
+      color: var(--primary);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .file-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: border-color 0.2s;
+    }
+
+    .file-card:hover { border-color: var(--primary); }
+
+    .file-card .ext-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    .ext-pdf  { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+    .ext-zip  { background: rgba(234, 179, 8, 0.12);  color: #eab308; }
+    .ext-docx { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
+    .ext-xlsx { background: rgba(34, 197, 94, 0.12);  color: #22c55e; }
+    .ext-default { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
+
+    .file-card .meta { flex: 1; min-width: 0; }
+    .file-card .meta .fname {
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-card .meta .fdetail {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .file-card .actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    .file-card .actions button {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .file-card .actions .dl-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .file-card .actions .del-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 600px) {
+      .file-card { flex-wrap: wrap; }
+      .file-card .actions { width: 100%; justify-content: flex-end; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<header>
+  <h1><span>IBK COB</span> File Vault</h1>
+  <p>Upload and manage COB files &middot; Last 20 files retained</p>
+</header>
+
+<main>
+  <div class="drop-zone" id="dropZone">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+    </svg>
+    <h3>Drop your file here</h3>
+    <p>or <strong id="browseLink">browse to choose</strong> &middot; PDF, DOCX, XLSX, ZIP up to 50 MB</p>
+  </div>
+
+  <input type="file" id="fileInput" accept=".pdf,.docx,.xlsx,.xls,.doc,.zip" />
+
+  <div class="upload-preview" id="uploadPreview">
+    <div class="file-icon" id="previewExt"></div>
+    <div class="file-info">
+      <div class="name" id="previewName"></div>
+      <div class="size" id="previewSize"></div>
+    </div>
+    <button class="upload-btn" id="uploadBtn">Upload</button>
+  </div>
+
+  <div class="progress-bar" id="progressBar">
+    <div class="fill" id="progressFill"></div>
+  </div>
+
+  <div>
+    <div class="section-title">
+      Recent Files <span class="badge" id="fileCount">0</span>
+    </div>
+  </div>
+
+  <div class="file-list" id="fileList">
+    <div class="empty-state">No files uploaded yet.</div>
+  </div>
+</main>
+
+<script>
+  const API = '';
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const uploadPreview = document.getElementById('uploadPreview');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const progressBar = document.getElementById('progressBar');
+  const progressFill = document.getElementById('progressFill');
+  const fileList = document.getElementById('fileList');
+  const fileCount = document.getElementById('fileCount');
+
+  let selectedFile = null;
+
+  function toast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+  }
+
+  function extOf(name) {
+    return name.split('.').pop().toLowerCase();
+  }
+
+  function extClass(ext) {
+    if (['pdf'].includes(ext)) return 'ext-pdf';
+    if (['zip'].includes(ext)) return 'ext-zip';
+    if (['doc', 'docx'].includes(ext)) return 'ext-docx';
+    if (['xls', 'xlsx'].includes(ext)) return 'ext-xlsx';
+    return 'ext-default';
+  }
+
+  function relativeTime(dateStr) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return mins + 'm ago';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + 'h ago';
+    const days = Math.floor(hrs / 24);
+    return days + 'd ago';
+  }
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  document.getElementById('browseLink').addEventListener('click', (e) => {
+    e.stopPropagation();
+    fileInput.click();
+  });
+
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) selectFile(e.dataTransfer.files[0]);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) selectFile(fileInput.files[0]);
+  });
+
+  function selectFile(file) {
+    selectedFile = file;
+    const ext = extOf(file.name);
+    document.getElementById('previewExt').textContent = ext;
+    document.getElementById('previewName').textContent = file.name;
+    document.getElementById('previewSize').textContent = formatBytes(file.size);
+    uploadPreview.classList.add('visible');
+    progressBar.classList.remove('visible');
+    progressFill.style.width = '0%';
+  }
+
+  uploadBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading…';
+    progressBar.classList.add('visible');
+    progressFill.style.width = '30%';
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      const res = await fetch(`${API}/api/upload`, { method: 'POST', body: formData });
+      progressFill.style.width = '90%';
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+      progressFill.style.width = '100%';
+      toast('File uploaded successfully!');
+      selectedFile = null;
+      fileInput.value = '';
+      uploadPreview.classList.remove('visible');
+      setTimeout(() => progressBar.classList.remove('visible'), 600);
+      loadFiles();
+    } catch (err) {
+      toast(err.message, 'error');
+      progressFill.style.width = '0%';
+      progressBar.classList.remove('visible');
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = 'Upload';
+    }
+  });
+
+  async function loadFiles() {
+    try {
+      const res = await fetch(`${API}/api/files`);
+      const data = await res.json();
+
+      fileCount.textContent = data.length;
+
+      if (!data.length) {
+        fileList.innerHTML = '<div class="empty-state">No files uploaded yet.</div>';
+        return;
+      }
+
+      fileList.innerHTML = data.map(f => {
+        const ext = extOf(f.file_name);
+        return `
+          <div class="file-card">
+            <div class="ext-badge ${extClass(ext)}">${ext}</div>
+            <div class="meta">
+              <div class="fname">${f.file_name}</div>
+              <div class="fdetail">${formatBytes(f.file_size)} &middot; ${relativeTime(f.uploaded_at)}</div>
+            </div>
+            <div class="actions">
+              <button class="dl-btn" onclick="downloadFile('${f.id}')">Download</button>
+              <button class="del-btn" onclick="deleteFile('${f.id}')">Delete</button>
+            </div>
+          </div>`;
+      }).join('');
+    } catch {
+      fileList.innerHTML = '<div class="empty-state">Failed to load files.</div>';
+    }
+  }
+
+  async function downloadFile(id) {
+    try {
+      const res = await fetch(`${API}/api/files/${id}/download`);
+      const data = await res.json();
+      if (data.url) window.open(data.url, '_blank');
+    } catch {
+      toast('Download failed', 'error');
+    }
+  }
+
+  async function deleteFile(id) {
+    if (!confirm('Delete this file?')) return;
+    try {
+      const res = await fetch(`${API}/api/files/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      toast('File deleted');
+      loadFiles();
+    } catch {
+      toast('Delete failed', 'error');
+    }
+  }
+
+  loadFiles();
+</script>
+</body>
+</html>

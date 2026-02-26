@@ -1,0 +1,21 @@
+{
+  "name": "ibk-cob-file-vault",
+  "version": "1.0.0",
+  "description": "IBK COB File Vault - Upload and manage COB files with Supabase",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.98.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "multer": "^2.0.2"
+  }
+}
