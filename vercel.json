@@ -1,25 +1,15 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/*.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    { "src": "/api/upload", "dest": "/api/upload.js" },
-    { "src": "/api/download(.*)", "dest": "/api/download.js" },
-    { "src": "/api/files(.*)", "dest": "/api/files.js" },
-    { "src": "/(.*)", "dest": "/public/$1" }
-  ],
+  "framework": null,
+  "outputDirectory": "public",
   "functions": {
     "api/upload.js": {
       "maxDuration": 60,
       "memory": 1024
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/api/upload", "destination": "/api/upload" },
+    { "source": "/api/download", "destination": "/api/download" },
+    { "source": "/api/files", "destination": "/api/files" }
+  ]
 }
