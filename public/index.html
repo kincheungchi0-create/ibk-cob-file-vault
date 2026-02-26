@@ -134,20 +134,12 @@
     }
     .upload-preview .file-info .size { font-size: 0.75rem; color: var(--text-dim); }
 
-    .upload-btn {
-      padding: 10px 28px;
-      border: none;
-      border-radius: 8px;
-      background: var(--primary);
-      color: #fff;
+    .upload-status {
+      font-size: 0.8rem;
       font-weight: 600;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: background 0.2s;
+      color: var(--primary);
+      flex-shrink: 0;
     }
-
-    .upload-btn:hover { background: var(--primary-hover); }
-    .upload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .progress-bar {
       display: none;
@@ -323,7 +315,7 @@
       <div class="name" id="previewName"></div>
       <div class="size" id="previewSize"></div>
     </div>
-    <button class="upload-btn" id="uploadBtn">Upload</button>
+    <span class="upload-status" id="uploadStatus">Uploading…</span>
   </div>
 
   <div class="progress-bar" id="progressBar">
@@ -346,13 +338,13 @@
   const dropZone = document.getElementById('dropZone');
   const fileInput = document.getElementById('fileInput');
   const uploadPreview = document.getElementById('uploadPreview');
-  const uploadBtn = document.getElementById('uploadBtn');
+  const uploadStatus = document.getElementById('uploadStatus');
   const progressBar = document.getElementById('progressBar');
   const progressFill = document.getElementById('progressFill');
   const fileList = document.getElementById('fileList');
   const fileCount = document.getElementById('fileCount');
 
-  let selectedFile = null;
+  let uploading = false;
 
   function toast(msg, type = 'success') {
     const t = document.getElementById('toast');
@@ -390,10 +382,10 @@
     return days + 'd ago';
   }
 
-  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('click', () => { if (!uploading) fileInput.click(); });
   document.getElementById('browseLink').addEventListener('click', (e) => {
     e.stopPropagation();
-    fileInput.click();
+    if (!uploading) fileInput.click();
   });
 
   dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -401,33 +393,27 @@
   dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('drag-over');
-    if (e.dataTransfer.files.length) selectFile(e.dataTransfer.files[0]);
+    if (!uploading && e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
   });
 
   fileInput.addEventListener('change', () => {
-    if (fileInput.files.length) selectFile(fileInput.files[0]);
+    if (!uploading && fileInput.files.length) uploadFile(fileInput.files[0]);
   });
 
-  function selectFile(file) {
-    selectedFile = file;
+  async function uploadFile(file) {
+    uploading = true;
+
     const ext = extOf(file.name);
     document.getElementById('previewExt').textContent = ext;
     document.getElementById('previewName').textContent = file.name;
     document.getElementById('previewSize').textContent = formatBytes(file.size);
+    uploadStatus.textContent = 'Uploading…';
     uploadPreview.classList.add('visible');
-    progressBar.classList.remove('visible');
-    progressFill.style.width = '0%';
-  }
-
-  uploadBtn.addEventListener('click', async () => {
-    if (!selectedFile) return;
-    uploadBtn.disabled = true;
-    uploadBtn.textContent = 'Uploading…';
     progressBar.classList.add('visible');
     progressFill.style.width = '30%';
 
     const formData = new FormData();
-    formData.append('file', selectedFile);
+    formData.append('file', file);
 
     try {
       const res = await fetch(`${API}/api/upload`, { method: 'POST', body: formData });
@@ -438,7 +424,6 @@
 
       progressFill.style.width = '100%';
       toast('File uploaded successfully!');
-      selectedFile = null;
       fileInput.value = '';
       uploadPreview.classList.remove('visible');
       setTimeout(() => progressBar.classList.remove('visible'), 600);
@@ -447,11 +432,11 @@
       toast(err.message, 'error');
       progressFill.style.width = '0%';
       progressBar.classList.remove('visible');
+      uploadPreview.classList.remove('visible');
     } finally {
-      uploadBtn.disabled = false;
-      uploadBtn.textContent = 'Upload';
+      uploading = false;
     }
-  });
+  }
 
   async function loadFiles() {
     try {
