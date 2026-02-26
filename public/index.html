@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IBK COB File Vault</title>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -38,19 +40,9 @@
       text-align: center;
     }
 
-    header h1 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-
+    header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
     header h1 span { color: var(--primary); }
-
-    header p {
-      color: var(--text-dim);
-      font-size: 0.85rem;
-      margin-top: 4px;
-    }
+    header p { color: var(--text-dim); font-size: 0.85rem; margin-top: 4px; }
 
     main {
       width: 100%;
@@ -58,7 +50,7 @@
       padding: 32px 20px;
       display: flex;
       flex-direction: column;
-      gap: 28px;
+      gap: 24px;
     }
 
     .drop-zone {
@@ -76,70 +68,46 @@
       background: rgba(99, 102, 241, 0.06);
     }
 
-    .drop-zone svg {
-      width: 48px;
-      height: 48px;
-      color: var(--text-dim);
-      margin-bottom: 12px;
-    }
-
-    .drop-zone h3 {
-      font-size: 1rem;
-      margin-bottom: 6px;
-    }
-
-    .drop-zone p {
-      color: var(--text-dim);
-      font-size: 0.8rem;
-    }
-
+    .drop-zone svg { width: 48px; height: 48px; color: var(--text-dim); margin-bottom: 12px; }
+    .drop-zone h3 { font-size: 1rem; margin-bottom: 6px; }
+    .drop-zone p { color: var(--text-dim); font-size: 0.8rem; }
     .drop-zone p strong { color: var(--primary); cursor: pointer; }
 
     #fileInput { display: none; }
 
-    .upload-preview {
+    .upload-queue {
       display: none;
+      flex-direction: column;
+      gap: 6px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 16px 20px;
-      align-items: center;
-      gap: 14px;
+      padding: 14px 18px;
     }
 
-    .upload-preview.visible { display: flex; }
+    .upload-queue.visible { display: flex; }
 
-    .upload-preview .file-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 8px;
-      background: rgba(99, 102, 241, 0.12);
+    .upload-queue .uq-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    .uq-item {
       display: flex;
       align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: var(--primary);
-      text-transform: uppercase;
-    }
-
-    .upload-preview .file-info { flex: 1; min-width: 0; }
-    .upload-preview .file-info .name {
-      font-size: 0.9rem;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .upload-preview .file-info .size { font-size: 0.75rem; color: var(--text-dim); }
-
-    .upload-status {
+      gap: 10px;
       font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--primary);
-      flex-shrink: 0;
+      padding: 6px 0;
     }
+
+    .uq-item .uq-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .uq-item .uq-status { flex-shrink: 0; font-weight: 600; font-size: 0.72rem; }
+    .uq-item .uq-status.pending { color: var(--text-dim); }
+    .uq-item .uq-status.uploading { color: var(--primary); }
+    .uq-item .uq-status.done { color: var(--success); }
+    .uq-item .uq-status.failed { color: var(--danger); }
 
     .progress-bar {
       display: none;
@@ -147,7 +115,6 @@
       background: var(--border);
       border-radius: 2px;
       overflow: hidden;
-      margin-top: 10px;
     }
 
     .progress-bar.visible { display: block; }
@@ -179,6 +146,14 @@
     .toast.success { background: var(--success); }
     .toast.error { background: var(--danger); }
 
+    .list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
     .section-title {
       font-size: 1rem;
       font-weight: 700;
@@ -196,16 +171,36 @@
       font-weight: 600;
     }
 
-    .file-list {
+    .list-actions { display: flex; gap: 8px; align-items: center; }
+
+    .list-actions button {
+      padding: 7px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
       display: flex;
-      flex-direction: column;
-      gap: 8px;
+      align-items: center;
+      gap: 5px;
     }
+
+    .list-actions button:hover { border-color: var(--primary); color: var(--primary); }
+    .list-actions button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .list-actions button:disabled:hover { border-color: var(--border); color: var(--text-dim); }
+
+    .btn-zip { background: rgba(99, 102, 241, 0.08) !important; }
+    .btn-zip:hover:not(:disabled) { background: rgba(99, 102, 241, 0.15) !important; }
+
+    .file-list { display: flex; flex-direction: column; gap: 8px; }
 
     .file-card {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
       padding: 14px 18px;
       background: var(--surface);
       border: 1px solid var(--border);
@@ -214,6 +209,15 @@
     }
 
     .file-card:hover { border-color: var(--primary); }
+    .file-card.selected { border-color: var(--primary); background: rgba(99, 102, 241, 0.04); }
+
+    .file-card .fc-check {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--primary);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
 
     .file-card .ext-badge {
       width: 40px;
@@ -242,11 +246,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .file-card .meta .fdetail {
-      font-size: 0.72rem;
-      color: var(--text-dim);
-      margin-top: 2px;
-    }
+    .file-card .meta .fdetail { font-size: 0.72rem; color: var(--text-dim); margin-top: 2px; }
 
     .file-card .actions { display: flex; gap: 6px; flex-shrink: 0; }
 
@@ -264,28 +264,12 @@
     .file-card .actions .dl-btn:hover { border-color: var(--primary); color: var(--primary); }
     .file-card .actions .del-btn:hover { border-color: var(--danger); color: var(--danger); }
 
-    .empty-state {
-      text-align: center;
-      padding: 40px;
-      color: var(--text-dim);
-      font-size: 0.85rem;
-    }
-
-    .loading-spinner {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid var(--border);
-      border-top-color: var(--primary);
-      border-radius: 50%;
-      animation: spin 0.6s linear infinite;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty-state { text-align: center; padding: 40px; color: var(--text-dim); font-size: 0.85rem; }
 
     @media (max-width: 600px) {
       .file-card { flex-wrap: wrap; }
       .file-card .actions { width: 100%; justify-content: flex-end; }
+      .list-header { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
@@ -303,28 +287,28 @@
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
       <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
     </svg>
-    <h3>Drop your file here</h3>
-    <p>or <strong id="browseLink">browse to choose</strong> &middot; PDF, DOCX, XLSX, ZIP up to 50 MB</p>
+    <h3>Drop files here</h3>
+    <p>or <strong id="browseLink">browse to choose</strong> &middot; Multiple files OK &middot; PDF, DOCX, XLSX, ZIP up to 50 MB each</p>
   </div>
 
-  <input type="file" id="fileInput" accept=".pdf,.docx,.xlsx,.xls,.doc,.zip" />
+  <input type="file" id="fileInput" accept=".pdf,.docx,.xlsx,.xls,.doc,.zip" multiple />
 
-  <div class="upload-preview" id="uploadPreview">
-    <div class="file-icon" id="previewExt"></div>
-    <div class="file-info">
-      <div class="name" id="previewName"></div>
-      <div class="size" id="previewSize"></div>
-    </div>
-    <span class="upload-status" id="uploadStatus">Uploading…</span>
+  <div class="upload-queue" id="uploadQueue">
+    <div class="uq-title">Upload Progress</div>
+    <div id="uqItems"></div>
   </div>
 
   <div class="progress-bar" id="progressBar">
     <div class="fill" id="progressFill"></div>
   </div>
 
-  <div>
+  <div class="list-header">
     <div class="section-title">
       Recent Files <span class="badge" id="fileCount">0</span>
+    </div>
+    <div class="list-actions">
+      <button id="selectAllBtn" onclick="toggleSelectAll()">Select All</button>
+      <button id="downloadZipBtn" class="btn-zip" onclick="downloadSelectedAsZip()" disabled>Download as ZIP</button>
     </div>
   </div>
 
@@ -337,14 +321,18 @@
   const API = '';
   const dropZone = document.getElementById('dropZone');
   const fileInput = document.getElementById('fileInput');
-  const uploadPreview = document.getElementById('uploadPreview');
-  const uploadStatus = document.getElementById('uploadStatus');
+  const uploadQueue = document.getElementById('uploadQueue');
+  const uqItems = document.getElementById('uqItems');
   const progressBar = document.getElementById('progressBar');
   const progressFill = document.getElementById('progressFill');
   const fileList = document.getElementById('fileList');
   const fileCount = document.getElementById('fileCount');
+  const selectAllBtn = document.getElementById('selectAllBtn');
+  const downloadZipBtn = document.getElementById('downloadZipBtn');
 
   let uploading = false;
+  let allSelected = false;
+  let currentFiles = [];
 
   function toast(msg, type = 'success') {
     const t = document.getElementById('toast');
@@ -359,9 +347,7 @@
     return (b / 1048576).toFixed(1) + ' MB';
   }
 
-  function extOf(name) {
-    return name.split('.').pop().toLowerCase();
-  }
+  function extOf(name) { return name.split('.').pop().toLowerCase(); }
 
   function extClass(ext) {
     if (['pdf'].includes(ext)) return 'ext-pdf';
@@ -378,10 +364,10 @@
     if (mins < 60) return mins + 'm ago';
     const hrs = Math.floor(mins / 60);
     if (hrs < 24) return hrs + 'h ago';
-    const days = Math.floor(hrs / 24);
-    return days + 'd ago';
+    return Math.floor(hrs / 24) + 'd ago';
   }
 
+  // ── Drop & browse ─────────────────────────────────────────
   dropZone.addEventListener('click', () => { if (!uploading) fileInput.click(); });
   document.getElementById('browseLink').addEventListener('click', (e) => {
     e.stopPropagation();
@@ -393,57 +379,74 @@
   dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('drag-over');
-    if (!uploading && e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+    if (!uploading && e.dataTransfer.files.length) uploadFiles(Array.from(e.dataTransfer.files));
   });
 
   fileInput.addEventListener('change', () => {
-    if (!uploading && fileInput.files.length) uploadFile(fileInput.files[0]);
+    if (!uploading && fileInput.files.length) uploadFiles(Array.from(fileInput.files));
   });
 
-  async function uploadFile(file) {
+  // ── Batch upload ──────────────────────────────────────────
+  async function uploadFiles(files) {
     uploading = true;
-
-    const ext = extOf(file.name);
-    document.getElementById('previewExt').textContent = ext;
-    document.getElementById('previewName').textContent = file.name;
-    document.getElementById('previewSize').textContent = formatBytes(file.size);
-    uploadStatus.textContent = 'Uploading…';
-    uploadPreview.classList.add('visible');
+    uploadQueue.classList.add('visible');
     progressBar.classList.add('visible');
-    progressFill.style.width = '30%';
 
-    const formData = new FormData();
-    formData.append('file', file);
+    uqItems.innerHTML = files.map((f, i) =>
+      `<div class="uq-item" id="uq-${i}">
+        <span class="uq-name">${f.name}</span>
+        <span class="uq-status pending" id="uqs-${i}">Waiting</span>
+      </div>`
+    ).join('');
 
-    try {
-      const res = await fetch(`${API}/api/upload`, { method: 'POST', body: formData });
-      progressFill.style.width = '90%';
-      const data = await res.json();
+    let done = 0;
+    for (let i = 0; i < files.length; i++) {
+      const statusEl = document.getElementById(`uqs-${i}`);
+      statusEl.textContent = 'Uploading…';
+      statusEl.className = 'uq-status uploading';
+      progressFill.style.width = `${((i) / files.length) * 100}%`;
 
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      const formData = new FormData();
+      formData.append('file', files[i]);
 
-      progressFill.style.width = '100%';
-      toast('File uploaded successfully!');
-      fileInput.value = '';
-      uploadPreview.classList.remove('visible');
-      setTimeout(() => progressBar.classList.remove('visible'), 600);
-      loadFiles();
-    } catch (err) {
-      toast(err.message, 'error');
-      progressFill.style.width = '0%';
-      progressBar.classList.remove('visible');
-      uploadPreview.classList.remove('visible');
-    } finally {
-      uploading = false;
+      try {
+        const res = await fetch(`${API}/api/upload`, { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+        statusEl.textContent = 'Done';
+        statusEl.className = 'uq-status done';
+        done++;
+      } catch (err) {
+        statusEl.textContent = 'Failed';
+        statusEl.className = 'uq-status failed';
+      }
+
+      progressFill.style.width = `${((i + 1) / files.length) * 100}%`;
     }
+
+    fileInput.value = '';
+    toast(`${done} of ${files.length} file(s) uploaded`);
+
+    setTimeout(() => {
+      uploadQueue.classList.remove('visible');
+      progressBar.classList.remove('visible');
+      progressFill.style.width = '0%';
+    }, 1500);
+
+    uploading = false;
+    loadFiles();
   }
 
+  // ── List files ────────────────────────────────────────────
   async function loadFiles() {
     try {
       const res = await fetch(`${API}/api/files`);
       const data = await res.json();
-
+      currentFiles = data;
       fileCount.textContent = data.length;
+      allSelected = false;
+      selectAllBtn.textContent = 'Select All';
+      updateZipBtn();
 
       if (!data.length) {
         fileList.innerHTML = '<div class="empty-state">No files uploaded yet.</div>';
@@ -453,7 +456,8 @@
       fileList.innerHTML = data.map(f => {
         const ext = extOf(f.file_name);
         return `
-          <div class="file-card">
+          <div class="file-card" id="fc-${f.id}">
+            <input type="checkbox" class="fc-check" data-id="${f.id}" onchange="onCheckChange()"/>
             <div class="ext-badge ${extClass(ext)}">${ext}</div>
             <div class="meta">
               <div class="fname">${f.file_name}</div>
@@ -470,6 +474,74 @@
     }
   }
 
+  // ── Selection ─────────────────────────────────────────────
+  function getCheckedIds() {
+    return Array.from(document.querySelectorAll('.fc-check:checked')).map(cb => cb.dataset.id);
+  }
+
+  function onCheckChange() {
+    const boxes = document.querySelectorAll('.fc-check');
+    const checked = document.querySelectorAll('.fc-check:checked');
+
+    boxes.forEach(cb => {
+      const card = cb.closest('.file-card');
+      card.classList.toggle('selected', cb.checked);
+    });
+
+    allSelected = boxes.length > 0 && checked.length === boxes.length;
+    selectAllBtn.textContent = allSelected ? 'Deselect All' : 'Select All';
+    updateZipBtn();
+  }
+
+  function toggleSelectAll() {
+    allSelected = !allSelected;
+    document.querySelectorAll('.fc-check').forEach(cb => {
+      cb.checked = allSelected;
+      cb.closest('.file-card').classList.toggle('selected', allSelected);
+    });
+    selectAllBtn.textContent = allSelected ? 'Deselect All' : 'Select All';
+    updateZipBtn();
+  }
+
+  function updateZipBtn() {
+    const count = getCheckedIds().length;
+    downloadZipBtn.disabled = count === 0;
+    downloadZipBtn.textContent = count > 0 ? `Download ${count} as ZIP` : 'Download as ZIP';
+  }
+
+  // ── Download as ZIP ───────────────────────────────────────
+  async function downloadSelectedAsZip() {
+    const ids = getCheckedIds();
+    if (!ids.length) return;
+
+    downloadZipBtn.disabled = true;
+    downloadZipBtn.textContent = 'Preparing ZIP…';
+
+    try {
+      const zip = new JSZip();
+
+      for (const id of ids) {
+        const res = await fetch(`${API}/api/download?id=${id}`);
+        const data = await res.json();
+        if (!data.url) continue;
+
+        const fileRes = await fetch(data.url);
+        const blob = await fileRes.blob();
+        zip.file(data.file_name, blob);
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const ts = new Date().toISOString().slice(0, 10);
+      saveAs(zipBlob, `IBK_COB_Files_${ts}.zip`);
+      toast(`${ids.length} file(s) downloaded as ZIP`);
+    } catch (err) {
+      toast('ZIP download failed', 'error');
+    } finally {
+      updateZipBtn();
+    }
+  }
+
+  // ── Single download ───────────────────────────────────────
   async function downloadFile(id) {
     try {
       const res = await fetch(`${API}/api/download?id=${id}`);
@@ -480,6 +552,7 @@
     }
   }
 
+  // ── Delete ────────────────────────────────────────────────
   async function deleteFile(id) {
     if (!confirm('Delete this file?')) return;
     try {
