@@ -32,7 +32,22 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── Upload ──────────────────────────────────────────────────
+async function pruneOldFiles() {
+  const { data: allFiles, error } = await supabase
+    .from(TABLE)
+    .select('id, storage_path')
+    .order('uploaded_at', { ascending: false });
+
+  if (error || !allFiles) return;
+
+  const toDelete = allFiles.slice(MAX_FILES);
+  if (!toDelete.length) return;
+
+  await supabase.storage.from(BUCKET).remove(toDelete.map(f => f.storage_path));
+  await supabase.from(TABLE).delete().in('id', toDelete.map(f => f.id));
+  console.log(`Pruned ${toDelete.length} old file(s)`);
+}
+
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file provided' });
@@ -60,9 +75,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       });
 
     if (insertErr) throw insertErr;
-
     await pruneOldFiles();
-
     res.json({ success: true, message: 'File uploaded' });
   } catch (err) {
     console.error('Upload error:', err);
@@ -70,7 +83,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-// ── List files ──────────────────────────────────────────────
 app.get('/api/files', async (_req, res) => {
   try {
     const { data, error } = await supabase
@@ -87,13 +99,15 @@ app.get('/api/files', async (_req, res) => {
   }
 });
 
-// ── Download (signed URL) ───────────────────────────────────
-app.get('/api/files/:id/download', async (req, res) => {
+app.get('/api/download', async (req, res) => {
   try {
+    const { id } = req.query;
+    if (!id) return res.status(400).json({ error: 'Missing file id' });
+
     const { data: file, error } = await supabase
       .from(TABLE)
       .select('storage_path, file_name')
-      .eq('id', req.params.id)
+      .eq('id', id)
       .single();
 
     if (error || !file) return res.status(404).json({ error: 'File not found' });
@@ -103,7 +117,6 @@ app.get('/api/files/:id/download', async (req, res) => {
       .createSignedUrl(file.storage_path, 300);
 
     if (signErr) throw signErr;
-
     res.json({ url: signed.signedUrl, file_name: file.file_name });
   } catch (err) {
     console.error('Download error:', err);
@@ -111,55 +124,27 @@ app.get('/api/files/:id/download', async (req, res) => {
   }
 });
 
-// ── Delete single file ─────────────────────────────────────
-app.delete('/api/files/:id', async (req, res) => {
+app.delete('/api/files', async (req, res) => {
   try {
+    const { id } = req.query;
+    if (!id) return res.status(400).json({ error: 'Missing file id' });
+
     const { data: file, error } = await supabase
       .from(TABLE)
       .select('storage_path')
-      .eq('id', req.params.id)
+      .eq('id', id)
       .single();
 
     if (error || !file) return res.status(404).json({ error: 'File not found' });
 
     await supabase.storage.from(BUCKET).remove([file.storage_path]);
-    await supabase.from(TABLE).delete().eq('id', req.params.id);
-
+    await supabase.from(TABLE).delete().eq('id', id);
     res.json({ success: true });
   } catch (err) {
     console.error('Delete error:', err);
     res.status(500).json({ error: 'Failed to delete file' });
   }
 });
-
-// ── Prune: keep only the latest MAX_FILES ───────────────────
-async function pruneOldFiles() {
-  try {
-    const { data: allFiles, error } = await supabase
-      .from(TABLE)
-      .select('id, storage_path')
-      .order('uploaded_at', { ascending: false });
-
-    if (error || !allFiles) return;
-
-    const toDelete = allFiles.slice(MAX_FILES);
-    if (!toDelete.length) return;
-
-    const storagePaths = toDelete.map(f => f.storage_path);
-    const ids = toDelete.map(f => f.id);
-
-    await supabase.storage.from(BUCKET).remove(storagePaths);
-
-    await supabase
-      .from(TABLE)
-      .delete()
-      .in('id', ids);
-
-    console.log(`Pruned ${toDelete.length} old file(s)`);
-  } catch (err) {
-    console.error('Prune error:', err);
-  }
-}
 
 app.listen(PORT, () => {
   console.log(`IBK COB File Vault running on http://localhost:${PORT}`);

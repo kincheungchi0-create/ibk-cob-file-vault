@@ -487,7 +487,7 @@
 
   async function downloadFile(id) {
     try {
-      const res = await fetch(`${API}/api/files/${id}/download`);
+      const res = await fetch(`${API}/api/download?id=${id}`);
       const data = await res.json();
       if (data.url) window.open(data.url, '_blank');
     } catch {
@@ -498,7 +498,7 @@
   async function deleteFile(id) {
     if (!confirm('Delete this file?')) return;
     try {
-      const res = await fetch(`${API}/api/files/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API}/api/files?id=${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error();
       toast('File deleted');
       loadFiles();

@@ -33,7 +33,7 @@ SUPABASE_SERVICE_KEY=your-service-role-key
 PORT=3000
 ```
 
-### 3. Install & Run
+### 3. Local Development
 
 ```bash
 npm install
@@ -42,11 +42,22 @@ npm start
 
 Open `http://localhost:3000` in your browser.
 
+### 4. Deploy to Vercel
+
+1. Push code to GitHub
+2. Import the repo in [vercel.com](https://vercel.com)
+3. Add environment variables in Vercel dashboard:
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_KEY`
+4. Deploy!
+
+> **Note**: Vercel free tier has a 4.5 MB request body limit. For files larger than that, upgrade to Vercel Pro or use Supabase client-side upload.
+
 ## API Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/api/upload` | Upload a file (multipart form) |
 | GET | `/api/files` | List recent files |
-| GET | `/api/files/:id/download` | Get signed download URL |
-| DELETE | `/api/files/:id` | Delete a file |
+| GET | `/api/download?id=xxx` | Get signed download URL |
+| DELETE | `/api/files?id=xxx` | Delete a file |
