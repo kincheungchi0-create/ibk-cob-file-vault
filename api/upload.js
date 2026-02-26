@@ -8,7 +8,7 @@ const ALLOWED_EXT = ['.pdf', '.zip', '.docx', '.xlsx', '.doc', '.xls'];
 const MAX_SIZE = 50 * 1024 * 1024;
 
 function getSupabase() {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 function parseMultipart(req) {

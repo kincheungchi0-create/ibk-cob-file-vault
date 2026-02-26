@@ -5,7 +5,7 @@ const TABLE = 'ibk_cob_filemeta_z8r3v';
 const MAX_FILES = 20;
 
 function getSupabase() {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 module.exports = async function handler(req, res) {

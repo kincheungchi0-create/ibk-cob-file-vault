@@ -29,7 +29,7 @@ Edit `.env` with your Supabase credentials:
 
 ```
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_KEY=your-service-role-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 PORT=3000
 ```
 
@@ -48,7 +48,7 @@ Open `http://localhost:3000` in your browser.
 2. Import the repo in [vercel.com](https://vercel.com)
 3. Add environment variables in Vercel dashboard:
    - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
 4. Deploy!
 
 > **Note**: Vercel free tier has a 4.5 MB request body limit. For files larger than that, upgrade to Vercel Pro or use Supabase client-side upload.
