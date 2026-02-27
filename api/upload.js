@@ -4,7 +4,7 @@ const { createClient } = require('@supabase/supabase-js');
 const BUCKET = 'ibk-cob-vault-x7q9m';
 const TABLE = 'ibk_cob_filemeta_z8r3v';
 const MAX_FILES = 20;
-const ALLOWED_EXT = ['.pdf', '.zip', '.docx', '.xlsx', '.doc', '.xls'];
+const ALLOWED_EXT = ['.pdf', '.zip', '.docx', '.xlsx', '.doc', '.xls', '.md', '.txt'];
 const MAX_SIZE = 50 * 1024 * 1024;
 
 function getSupabase() {

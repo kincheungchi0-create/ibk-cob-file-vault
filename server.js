@@ -21,7 +21,7 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = ['.pdf', '.zip', '.docx', '.xlsx', '.doc', '.xls'];
+    const allowed = ['.pdf', '.zip', '.docx', '.xlsx', '.doc', '.xls', '.md', '.txt'];
     const ext = path.extname(file.originalname).toLowerCase();
     if (allowed.includes(ext)) return cb(null, true);
     cb(new Error('File type not allowed. Accepted: PDF, DOCX, XLSX, ZIP'));

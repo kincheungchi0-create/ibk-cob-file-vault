@@ -18,7 +18,9 @@ VALUES (
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'application/msword',
     'application/vnd.ms-excel',
-    'application/octet-stream'
+    'application/octet-stream',
+    'text/plain',
+    'text/markdown'
   ]
 ) ON CONFLICT (id) DO NOTHING;
 

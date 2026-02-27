@@ -236,6 +236,8 @@
     .ext-zip  { background: rgba(234, 179, 8, 0.12);  color: #eab308; }
     .ext-docx { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
     .ext-xlsx { background: rgba(34, 197, 94, 0.12);  color: #22c55e; }
+    .ext-md   { background: rgba(168, 85, 247, 0.12); color: #a855f7; }
+    .ext-txt  { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
     .ext-default { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
 
     .file-card .meta { flex: 1; min-width: 0; }
@@ -288,10 +290,10 @@
       <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
     </svg>
     <h3>Drop files here</h3>
-    <p>or <strong id="browseLink">browse to choose</strong> &middot; Multiple files OK &middot; PDF, DOCX, XLSX, ZIP up to 50 MB each</p>
+    <p>or <strong id="browseLink">browse to choose</strong> &middot; Multiple files OK &middot; PDF, DOCX, XLSX, ZIP, MD, TXT up to 50 MB each</p>
   </div>
 
-  <input type="file" id="fileInput" accept=".pdf,.docx,.xlsx,.xls,.doc,.zip" multiple />
+  <input type="file" id="fileInput" accept=".pdf,.docx,.xlsx,.xls,.doc,.zip,.md,.txt" multiple />
 
   <div class="upload-queue" id="uploadQueue">
     <div class="uq-title">Upload Progress</div>
@@ -354,6 +356,8 @@
     if (['zip'].includes(ext)) return 'ext-zip';
     if (['doc', 'docx'].includes(ext)) return 'ext-docx';
     if (['xls', 'xlsx'].includes(ext)) return 'ext-xlsx';
+    if (['md'].includes(ext)) return 'ext-md';
+    if (['txt'].includes(ext)) return 'ext-txt';
     return 'ext-default';
   }
 
